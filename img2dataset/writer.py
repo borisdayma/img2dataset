@@ -182,13 +182,14 @@ class TFRecordSampleWriter:
         self.buffered_parquet_writer = BufferedParquetWriter(output_folder + "/" + shard_name + ".parquet", schema, 100)
         self.encode_format = encode_format
 
-    def write(self, img_str, key, caption, meta):
+    def write(self, img_strs, key, caption, meta):
         """Write a sample using tfrecord writer"""
-        if img_str is not None:
+        if img_strs is not None:
             sample = {
                 "key": self._bytes_feature(key.encode()),
-                self.encode_format: self._bytes_feature(img_str),
             }
+            for size, img_str in img_strs.items():
+                sample[f"{self.encode_format}_{size}"] = self._bytes_feature(img_str)
             if self.save_caption:
                 sample["txt"] = self._bytes_feature(str(caption) if caption is not None else "")
             for k, v in meta.items():

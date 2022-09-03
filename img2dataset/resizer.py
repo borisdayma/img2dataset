@@ -151,34 +151,52 @@ class Resizer:
                 if max(original_height, original_width) / min(original_height, original_width) > self.max_aspect_ratio:
                     return None, None, None, None, None, "aspect ratio too large"
 
-                # resizing in following conditions
-                if self.resize_mode in (ResizeMode.keep_ratio, ResizeMode.center_crop):
-                    downscale = min(original_width, original_height) > self.image_size
-                    if not self.resize_only_if_bigger or downscale:
-                        interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
-                        img = A.smallest_max_size(img, self.image_size, interpolation=interpolation)
-                        if self.resize_mode == ResizeMode.center_crop:
-                            img = A.center_crop(img, self.image_size, self.image_size)
-                        encode_needed = True
-                elif self.resize_mode == ResizeMode.border:
-                    downscale = max(original_width, original_height) > self.image_size
-                    if not self.resize_only_if_bigger or downscale:
-                        interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
-                        img = A.longest_max_size(img, self.image_size, interpolation=interpolation)
-                        img = A.pad(
+                # resizing
+                image_sizes = [int(s) for s in f"{self.image_size}".split(",")]
+                img_strs = {}
+                for image_size in image_sizes:
+                    # TODO: we currently only support the case where we save only if real size is bigger than current image_size
+                    if min(original_height, original_width) >= image_size:
+                        img_str, width, height = self._resize(
                             img,
-                            self.image_size,
-                            self.image_size,
-                            border_mode=cv2.BORDER_CONSTANT,
-                            value=[255, 255, 255],
+                            img_buf,
+                            original_width,
+                            original_height,
+                            image_size,
+                            encode_needed,
                         )
-                        encode_needed = True
-                height, width = img.shape[:2]
-                if encode_needed:
-                    img_str = cv2.imencode(f".{self.encode_format}", img, params=self.encode_params)[1].tobytes()
-                else:
-                    img_str = img_buf.tobytes()
-                return img_str, width, height, original_width, original_height, None
+                        img_strs[image_size] = img_str
+                return img_strs, width, height, original_width, original_height, None
 
         except Exception as err:  # pylint: disable=broad-except
             return None, None, None, None, None, str(err)
+
+    def _resize(self, img, img_buf, original_width, original_height, image_size, encode_needed):
+        # resizing in following conditions
+        if self.resize_mode in (ResizeMode.keep_ratio, ResizeMode.center_crop):
+            downscale = min(original_width, original_height) > image_size
+            if not self.resize_only_if_bigger or downscale:
+                interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
+                img = A.smallest_max_size(img, image_size, interpolation=interpolation)
+                if self.resize_mode == ResizeMode.center_crop:
+                    img = A.center_crop(img, image_size, image_size)
+                encode_needed = True
+        elif self.resize_mode == ResizeMode.border:
+            downscale = max(original_width, original_height) > image_size
+            if not self.resize_only_if_bigger or downscale:
+                interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
+                img = A.longest_max_size(img, image_size, interpolation=interpolation)
+                img = A.pad(
+                    img,
+                    image_size,
+                    image_size,
+                    border_mode=cv2.BORDER_CONSTANT,
+                    value=[255, 255, 255],
+                )
+                encode_needed = True
+        height, width = img.shape[:2]
+        if encode_needed:
+            img_str = cv2.imencode(f".{self.encode_format}", img, params=self.encode_params)[1].tobytes()
+        else:
+            img_str = img_buf.tobytes()
+        return img_str, width, height
