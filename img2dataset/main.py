@@ -54,6 +54,8 @@ def download(
     disable_all_reencoding: bool = False,
     min_image_size: int = 0,
     max_aspect_ratio: float = float("inf"),
+    crop_top: int = 0,
+    crop_bottom: int = 0,
     incremental_mode: str = "incremental",
     max_shard_retry: int = 1,
 ):
@@ -150,6 +152,8 @@ def download(
         disable_all_reencoding=disable_all_reencoding,
         min_image_size=min_image_size,
         max_aspect_ratio=max_aspect_ratio,
+        crop_top=crop_top,
+        crop_bottom=crop_bottom,
     )
 
     downloader = Downloader(

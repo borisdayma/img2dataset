@@ -242,7 +242,7 @@ class Downloader:
 
                     if self.compute_md5:
                         img_stream.seek(0)
-                        meta["md5"] = hashlib.md5(img_stream.read()).hexdigest()
+                        meta["md5"] = hashlib.md5(img.tobytes()).hexdigest()
 
                     meta["status"] = status
                     meta["width"] = width

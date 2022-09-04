@@ -91,6 +91,8 @@ class Resizer:
         disable_all_reencoding=False,
         min_image_size=0,
         max_aspect_ratio=float("inf"),
+        crop_top=0,
+        crop_bottom=0,
     ):
         self.image_size = image_size
         if isinstance(resize_mode, str):
@@ -119,6 +121,8 @@ class Resizer:
         self.disable_all_reencoding = disable_all_reencoding
         self.min_image_size = min_image_size
         self.max_aspect_ratio = max_aspect_ratio
+        self.crop_top = crop_top
+        self.crop_bottom = crop_bottom
 
     def __call__(self, img_stream):
         """
@@ -142,6 +146,9 @@ class Resizer:
                     alpha = img[:, :, 3, np.newaxis]
                     img = alpha / 255 * img[..., :3] + 255 - alpha
                     img = np.rint(img.clip(min=0, max=255)).astype(np.uint8)
+                    encode_needed = True
+                if self.crop_bottom > 0 or self.crop_top > 0:
+                    img = img[self.crop_top : -self.crop_bottom if self.crop_bottom else None]
                     encode_needed = True
                 original_height, original_width = img.shape[:2]
                 # check if image is too small
