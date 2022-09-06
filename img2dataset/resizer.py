@@ -131,6 +131,8 @@ class Resizer:
         """
         try:
             if self.disable_all_reencoding:
+                # TODO: use a standard key without image size
+                raise Exception("Currently not supported")
                 return img_stream.read(), None, None, None, None, None
             with SuppressStdoutStderr():
                 cv2.setNumThreads(1)
@@ -153,10 +155,10 @@ class Resizer:
                 original_height, original_width = img.shape[:2]
                 # check if image is too small
                 if min(original_height, original_width) < self.min_image_size:
-                    return None, None, None, None, None, "image too small"
+                    return None, None, None, None, None, None, "image too small"
                 # check if wrong aspect ratio
                 if max(original_height, original_width) / min(original_height, original_width) > self.max_aspect_ratio:
-                    return None, None, None, None, None, "aspect ratio too large"
+                    return None, None, None, None, None, None, "aspect ratio too large"
 
                 # resizing
                 image_sizes = [int(s) for s in f"{self.image_size}".split(",")]
@@ -184,7 +186,7 @@ class Resizer:
                 )
 
         except Exception as err:  # pylint: disable=broad-except
-            return None, None, None, None, None, str(err)
+            return None, None, None, None, None, None, str(err)
 
     def _resize(self, img, img_buf, original_width, original_height, image_size, encode_needed):
         # resizing in following conditions
