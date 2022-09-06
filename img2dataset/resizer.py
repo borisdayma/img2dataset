@@ -173,7 +173,15 @@ class Resizer:
                             encode_needed,
                         )
                         img_strs[image_size] = img_str
-                return img_strs, width, height, original_width, original_height, None
+                return (
+                    img,
+                    img_strs,
+                    width,
+                    height,
+                    original_width,
+                    original_height,
+                    None,
+                )
 
         except Exception as err:  # pylint: disable=broad-except
             return None, None, None, None, None, str(err)

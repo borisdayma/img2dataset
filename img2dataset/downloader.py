@@ -200,6 +200,7 @@ class Downloader:
                     img_stream.seek(0)
                     (
                         img,
+                        img_strs,
                         width,
                         height,
                         original_width,
@@ -253,7 +254,7 @@ class Downloader:
                     del img_stream
 
                     sample_writer.write(
-                        img,
+                        img_strs,
                         str_key,
                         sample_data[caption_indice] if caption_indice is not None else None,
                         meta,
