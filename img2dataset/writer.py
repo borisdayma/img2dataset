@@ -252,17 +252,18 @@ class FilesSampleWriter:
         self.buffered_parquet_writer = BufferedParquetWriter(output_folder + "/" + shard_name + ".parquet", schema, 100)
         self.encode_format = encode_format
 
-    def write(self, img_str, key, caption, meta):
+    def write(self, img_strs, key, caption, meta):
         """Write sample to disk"""
-        if img_str is not None:
-            filename = f"{self.subfolder}/{key}.{self.encode_format}"
-            with self.fs.open(filename, "wb") as f:
-                f.write(img_str)
-            if self.save_caption:
-                caption = str(caption) if caption is not None else ""
-                caption_filename = f"{self.subfolder}/{key}.txt"
-                with self.fs.open(caption_filename, "w") as f:
-                    f.write(str(caption))
+        if img_strs is not None:
+            for size, img_str in img_strs.items():
+                filename = f"{self.subfolder}/{key}_{size}.{self.encode_format}"
+                with self.fs.open(filename, "wb") as f:
+                    f.write(img_str)
+                if self.save_caption:
+                    caption = str(caption) if caption is not None else ""
+                    caption_filename = f"{self.subfolder}/{key}.txt"
+                    with self.fs.open(caption_filename, "w") as f:
+                        f.write(str(caption))
 
             # some meta data may not be JSON serializable
             for k, v in meta.items():

@@ -123,7 +123,7 @@ class Downloader:
         if self.extract_exif:
             schema = schema.append(pa.field("exif", pa.string()))
 
-        if self.compute_md5:
+        if self.compute_md5 and "md5" not in schema.names:
             schema = schema.append(pa.field("md5", pa.string()))
 
         pydict = df.select(self.column_list).to_pydict()
@@ -182,7 +182,7 @@ class Downloader:
                     }
                     if self.extract_exif:
                         meta["exif"] = None
-                    if self.compute_md5:
+                    if self.compute_md5 and "md5" not in meta:
                         meta["md5"] = None
                     if error_message is not None:
                         failed_to_download += 1
@@ -223,6 +223,30 @@ class Downloader:
                         del img_stream
                         semaphore.release()
                         continue
+
+                    if self.compute_md5:
+                        img_stream.seek(0)
+                        md5 = hashlib.md5(img.tobytes()).hexdigest()
+                        if "md5" in meta and meta["md5"] != md5:
+                            failed_to_resize += 1
+                            status = "failed_to_resize"
+                            error_message = "md5 mismatch"
+                            status_dict.increment(error_message)
+                            meta["status"] = status
+                            meta["error_message"] = error_message
+                            sample_writer.write(
+                                None,
+                                str_key,
+                                sample_data[caption_indice] if caption_indice is not None else None,
+                                meta,
+                            )
+                            img_stream.close()
+                            del img_stream
+                            semaphore.release()
+                            continue
+                        if "md5" not in meta:
+                            meta["md5"] = md5
+
                     successes += 1
                     status = "success"
                     status_dict.increment(status)
@@ -240,10 +264,6 @@ class Downloader:
                         except Exception as _:  # pylint: disable=broad-except
                             exif = None
                         meta["exif"] = exif
-
-                    if self.compute_md5:
-                        img_stream.seek(0)
-                        meta["md5"] = hashlib.md5(img.tobytes()).hexdigest()
 
                     meta["status"] = status
                     meta["width"] = width
