@@ -188,8 +188,11 @@ class TFRecordSampleWriter:
             sample = {
                 "key": self._bytes_feature(key.encode()),
             }
+            # TODO: only one size supported at the moment
+            assert len(img_strs) == 1
             for size, img_str in img_strs.items():
-                sample[f"{self.encode_format}_{size}"] = self._bytes_feature(img_str)
+                #sample[f"{self.encode_format}_{size}"] = self._bytes_feature(img_str)
+                sample[f"{self.encode_format}"] = self._bytes_feature(img_str)
             if self.save_caption:
                 sample["txt"] = self._bytes_feature(str(caption) if caption is not None else "")
             for k, v in meta.items():

@@ -161,11 +161,17 @@ class Resizer:
                     return None, None, None, None, None, None, "aspect ratio too large"
 
                 # resizing
-                image_sizes = [int(s) for s in f"{self.image_size}".split(",")]
+                # TODO: we don't support multiple sizes anymore
+                if False:
+                    image_sizes = [int(s) for s in f"{self.image_size}".split(",")]
+                else:
+                    image_sizes = [self.image_size]
+                    assert ',' not in f"{self.image_size}"
                 img_strs = {}
                 for image_size in image_sizes:
                     # TODO: we currently only support the case where we save only if real size is bigger than current image_size
-                    if min(original_height, original_width) >= image_size:
+                    # - we also assume that data has been pre-filtered
+                    # if min(original_height, original_width) >= image_size:
                         img_str, width, height = self._resize(
                             img,
                             img_buf,
@@ -186,17 +192,33 @@ class Resizer:
                 )
 
         except Exception as err:  # pylint: disable=broad-except
+            raise err
             return None, None, None, None, None, None, str(err)
 
     def _resize(self, img, img_buf, original_width, original_height, image_size, encode_needed):
         # resizing in following conditions
         if self.resize_mode in (ResizeMode.keep_ratio, ResizeMode.center_crop):
-            downscale = min(original_width, original_height) > image_size
+            if isinstance(image_size, str):
+                # width x height
+                img_width, img_height = [int(s) for s in image_size.split("x")]
+            else:
+                img_width = img_height = int(image_size)
+            # resize
+            downscale = (original_height > img_height) or (original_width > img_width)
             if not self.resize_only_if_bigger or downscale:
                 interpolation = self.downscale_interpolation if downscale else self.upscale_interpolation
-                img = A.smallest_max_size(img, image_size, interpolation=interpolation)
+                if original_width / img_width > original_height / img_height:
+                    if img_width > img_height:
+                        img = A.smallest_max_size(img, img_height, interpolation=interpolation)
+                    else:
+                        img = A.longest_max_size(img, img_width, interpolation=interpolation)
+                else:
+                    if img_width > img_height:
+                        img = A.longest_max_size(img, img_width, interpolation=interpolation)
+                    else:
+                        img = A.smallest_max_size(img, img_height, interpolation=interpolation)
                 if self.resize_mode == ResizeMode.center_crop:
-                    img = A.center_crop(img, image_size, image_size)
+                    img = A.center_crop(img, img_height, img_width)
                 encode_needed = True
         elif self.resize_mode == ResizeMode.border:
             downscale = max(original_width, original_height) > image_size
