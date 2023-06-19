@@ -231,7 +231,7 @@ class Resizer:
                         )
                     else:
                         img = A.longest_max_size(
-                            img, img_width, interpolation=interpolation
+                            img, img_height, interpolation=interpolation
                         )
                 else:
                     if img_width > img_height:
@@ -240,7 +240,7 @@ class Resizer:
                         )
                     else:
                         img = A.smallest_max_size(
-                            img, img_height, interpolation=interpolation
+                            img, img_width, interpolation=interpolation
                         )
                 if self.resize_mode == ResizeMode.center_crop:
                     img = A.center_crop(img, img_height, img_width)
