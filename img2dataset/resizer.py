@@ -65,6 +65,27 @@ def inter_str_to_cv2(inter_str):
     return _INTER_STR_TO_CV2[inter_str]
 
 
+def get_closest_size(original_width, original_height, img_sizes):
+    closest_size = None
+    closest_ar_dist = 100
+    ar_target = (
+        original_width / original_height
+        if original_width > original_height
+        else original_height / original_width
+    )
+    # iterate over all aspect ratios
+    for img_size in img_sizes.split(","):
+        width, height = [int(x) for x in img_size.split("x")]
+        ar = width / height if original_width > original_height else height / width
+        ar_dist = abs(ar - ar_target)
+        if ar_dist < closest_ar_dist:
+            closest_ar_dist = ar_dist
+            closest_size = img_size
+    img_width, img_height = [int(x) for x in closest_size.split("x")]
+    downscale = (original_height >= img_height) and (original_width >= img_width)
+    return closest_size, downscale
+
+
 class Resizer:
     """
     Resize images
@@ -173,29 +194,24 @@ class Resizer:
                     return None, None, None, None, None, None, "aspect ratio too large"
 
                 # resizing
-                # TODO: we don't support multiple sizes anymore
-                if False:
-                    image_sizes = [int(s) for s in f"{self.image_size}".split(",")]
-                else:
-                    image_sizes = [self.image_size]
-                    assert "," not in f"{self.image_size}"
-                img_strs = {}
-                for image_size in image_sizes:
-                    # TODO: we currently only support the case where we save only if real size is bigger than current image_size
-                    # - we also assume that data has been pre-filtered
-                    # if min(original_height, original_width) >= image_size:
-                    img_str, width, height = self._resize(
-                        img,
-                        img_buf,
-                        original_width,
-                        original_height,
-                        image_size,
-                        encode_needed,
-                    )
-                    img_strs[image_size] = img_str
+                image_size, downscale = get_closest_size(
+                    original_width, original_height, self.image_size
+                )
+                if not downscale:
+                    # TODO: upscale not supported yet
+                    return None, None, None, None, None, None, "image too small"
+
+                img_str, width, height = self._resize(
+                    img,
+                    img_buf,
+                    original_width,
+                    original_height,
+                    image_size,
+                    encode_needed,
+                )
                 return (
                     img,
-                    img_strs,
+                    img_str,
                     width,
                     height,
                     original_width,
@@ -217,7 +233,12 @@ class Resizer:
             else:
                 img_width = img_height = int(image_size)
             # resize
-            downscale = (original_height > img_height) or (original_width > img_width)
+            downscale = (original_height >= img_height) and (
+                original_width >= img_width
+            )
+            assert (
+                downscale
+            ), f"image size is larger than original image {image_size}, {original_width}x{original_height}"
             if not self.resize_only_if_bigger or downscale:
                 interpolation = (
                     self.downscale_interpolation
@@ -225,7 +246,7 @@ class Resizer:
                     else self.upscale_interpolation
                 )
                 if original_width / img_width > original_height / img_height:
-                    if img_width > img_height:
+                    if original_width > original_height:
                         img = A.smallest_max_size(
                             img, img_height, interpolation=interpolation
                         )
@@ -234,7 +255,7 @@ class Resizer:
                             img, img_height, interpolation=interpolation
                         )
                 else:
-                    if img_width > img_height:
+                    if original_width > original_height:
                         img = A.longest_max_size(
                             img, img_width, interpolation=interpolation
                         )

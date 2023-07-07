@@ -112,7 +112,9 @@ class WebDatasetSampleWriter:
         self.tar_fd = fs.open(f"{output_path}/{shard_name}.tar", "wb")
         self.tarwriter = wds.TarWriter(self.tar_fd)
         self.save_caption = save_caption
-        self.buffered_parquet_writer = BufferedParquetWriter(output_folder + "/" + shard_name + ".parquet", schema, 100)
+        self.buffered_parquet_writer = BufferedParquetWriter(
+            output_folder + "/" + shard_name + ".parquet", schema, 100
+        )
         self.encode_format = encode_format
 
     def write(self, img_str, key, caption, meta):
@@ -158,7 +160,9 @@ class TFRecordSampleWriter:
                 Features,
                 Feature,
             )
-            from tensorflow.python.lib.io.tf_record import TFRecordWriter  # pylint: disable=import-outside-toplevel
+            from tensorflow.python.lib.io.tf_record import (
+                TFRecordWriter,
+            )  # pylint: disable=import-outside-toplevel
 
             self._BytesList = BytesList  # pylint: disable=invalid-name
             self._Int64List = Int64List  # pylint: disable=invalid-name
@@ -179,22 +183,22 @@ class TFRecordSampleWriter:
         self.shard_id = shard_id
         self.tf_writer = TFRecordWriter(f"{output_folder}/{shard_name}.tfrecord")
         self.save_caption = save_caption
-        self.buffered_parquet_writer = BufferedParquetWriter(output_folder + "/" + shard_name + ".parquet", schema, 100)
+        self.buffered_parquet_writer = BufferedParquetWriter(
+            output_folder + "/" + shard_name + ".parquet", schema, 100
+        )
         self.encode_format = encode_format
 
-    def write(self, img_strs, key, caption, meta):
+    def write(self, img_str, key, caption, meta):
         """Write a sample using tfrecord writer"""
-        if img_strs is not None:
+        if img_str is not None:
             sample = {
                 "key": self._bytes_feature(key.encode()),
             }
-            # TODO: only one size supported at the moment
-            assert len(img_strs) == 1
-            for size, img_str in img_strs.items():
-                #sample[f"{self.encode_format}_{size}"] = self._bytes_feature(img_str)
-                sample[f"{self.encode_format}"] = self._bytes_feature(img_str)
+            sample[f"{self.encode_format}"] = self._bytes_feature(img_str)
             if self.save_caption:
-                sample["txt"] = self._bytes_feature(str(caption) if caption is not None else "")
+                sample["txt"] = self._bytes_feature(
+                    str(caption) if caption is not None else ""
+                )
             for k, v in meta.items():
                 sample[k] = self._feature(v)
             tf_example = self._Example(features=self._Features(feature=sample))
@@ -252,21 +256,22 @@ class FilesSampleWriter:
         if not self.fs.exists(self.subfolder):
             self.fs.mkdir(self.subfolder)
         self.save_caption = save_caption
-        self.buffered_parquet_writer = BufferedParquetWriter(output_folder + "/" + shard_name + ".parquet", schema, 100)
+        self.buffered_parquet_writer = BufferedParquetWriter(
+            output_folder + "/" + shard_name + ".parquet", schema, 100
+        )
         self.encode_format = encode_format
 
-    def write(self, img_strs, key, caption, meta):
+    def write(self, img_str, key, caption, meta):
         """Write sample to disk"""
-        if img_strs is not None:
-            for size, img_str in img_strs.items():
-                filename = f"{self.subfolder}/{key}_{size}.{self.encode_format}"
-                with self.fs.open(filename, "wb") as f:
-                    f.write(img_str)
-                if self.save_caption:
-                    caption = str(caption) if caption is not None else ""
-                    caption_filename = f"{self.subfolder}/{key}.txt"
-                    with self.fs.open(caption_filename, "w") as f:
-                        f.write(str(caption))
+        if img_str is not None:
+            filename = f"{self.subfolder}/{key}.{self.encode_format}"
+            with self.fs.open(filename, "wb") as f:
+                f.write(img_str)
+            if self.save_caption:
+                caption = str(caption) if caption is not None else ""
+                caption_filename = f"{self.subfolder}/{key}.txt"
+                with self.fs.open(caption_filename, "w") as f:
+                    f.write(str(caption))
 
             # some meta data may not be JSON serializable
             for k, v in meta.items():
@@ -285,7 +290,15 @@ class FilesSampleWriter:
 class DummySampleWriter:
     """Does not write"""
 
-    def __init__(self, shard_id, output_folder, save_caption, oom_shard_count, schema, encode_format):
+    def __init__(
+        self,
+        shard_id,
+        output_folder,
+        save_caption,
+        oom_shard_count,
+        schema,
+        encode_format,
+    ):
         pass
 
     def write(self, img_str, key, caption, meta):
