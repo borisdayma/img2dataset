@@ -25,7 +25,9 @@ def download_image(row, timeout):
         request = urllib.request.Request(
             url,
             data=None,
-            headers={"User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0"},
+            headers={
+                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0"
+            },
         )
         with urllib.request.urlopen(request, timeout=timeout) as r:
             img_stream = io.BytesIO(r.read())
@@ -47,8 +49,10 @@ def download_image_with_retry(row, timeout, retries):
 def compute_key(key, shard_id, oom_sample_per_shard, oom_shard_count):
     true_key = (10**oom_sample_per_shard) * shard_id + key
     key_format = oom_sample_per_shard + oom_shard_count
-    str_key = "{true_key:0{key_format}d}".format(  # pylint: disable=consider-using-f-string
-        key_format=key_format, true_key=true_key
+    str_key = (
+        "{true_key:0{key_format}d}".format(  # pylint: disable=consider-using-f-string
+            key_format=key_format, true_key=true_key
+        )
     )
     return str_key
 
@@ -138,7 +142,9 @@ class Downloader:
         failed_to_download = 0
         failed_to_resize = 0
         url_indice = self.column_list.index("url")
-        caption_indice = self.column_list.index("caption") if "caption" in self.column_list else None
+        caption_indice = (
+            self.column_list.index("caption") if "caption" in self.column_list else None
+        )
         key_url_list = [(key, x[url_indice]) for key, x in shard_to_dl]
 
         # this prevents an accumulation of more than twice the number of threads in sample ready to resize
@@ -164,14 +170,21 @@ class Downloader:
         oom_sample_per_shard = math.ceil(math.log10(self.number_sample_per_shard))
         with ThreadPool(self.thread_count) as thread_pool:
             for key, img_stream, error_message in thread_pool.imap_unordered(
-                lambda x: download_image_with_retry(x, timeout=self.timeout, retries=self.retries),
+                lambda x: download_image_with_retry(
+                    x, timeout=self.timeout, retries=self.retries
+                ),
                 loader,
             ):
                 try:
                     _, sample_data = shard_to_dl[key]
-                    str_key = compute_key(key, shard_id, oom_sample_per_shard, self.oom_shard_count)
+                    str_key = compute_key(
+                        key, shard_id, oom_sample_per_shard, self.oom_shard_count
+                    )
                     meta = {
-                        **{self.column_list[i]: sample_data[i] for i in range(len(self.column_list))},
+                        **{
+                            self.column_list[i]: sample_data[i]
+                            for i in range(len(self.column_list))
+                        },
                         "key": str_key,
                         "status": None,
                         "error_message": error_message,
@@ -192,7 +205,9 @@ class Downloader:
                         sample_writer.write(
                             None,
                             str_key,
-                            sample_data[caption_indice] if caption_indice is not None else None,
+                            sample_data[caption_indice]
+                            if caption_indice is not None
+                            else None,
                             meta,
                         )
                         semaphore.release()
@@ -216,7 +231,9 @@ class Downloader:
                         sample_writer.write(
                             None,
                             str_key,
-                            sample_data[caption_indice] if caption_indice is not None else None,
+                            sample_data[caption_indice]
+                            if caption_indice is not None
+                            else None,
                             meta,
                         )
                         img_stream.close()
@@ -227,7 +244,11 @@ class Downloader:
                     if self.compute_md5:
                         img_stream.seek(0)
                         md5 = hashlib.md5(img.tobytes()).hexdigest()
-                        if "md5" in meta and meta["md5"] != md5:
+                        if (
+                            "md5" in meta
+                            and meta["md5"] is not None
+                            and meta["md5"] != md5
+                        ):
                             failed_to_resize += 1
                             status = "failed_to_resize"
                             error_message = "md5 mismatch"
@@ -237,15 +258,16 @@ class Downloader:
                             sample_writer.write(
                                 None,
                                 str_key,
-                                sample_data[caption_indice] if caption_indice is not None else None,
+                                sample_data[caption_indice]
+                                if caption_indice is not None
+                                else None,
                                 meta,
                             )
                             img_stream.close()
                             del img_stream
                             semaphore.release()
                             continue
-                        if "md5" not in meta:
-                            meta["md5"] = md5
+                        meta["md5"] = md5
 
                     successes += 1
                     status = "success"
@@ -257,7 +279,9 @@ class Downloader:
                             exif = json.dumps(
                                 {
                                     k: str(v).strip()
-                                    for k, v in exifread.process_file(img_stream, details=False).items()
+                                    for k, v in exifread.process_file(
+                                        img_stream, details=False
+                                    ).items()
                                     if v is not None
                                 }
                             )
@@ -276,7 +300,9 @@ class Downloader:
                     sample_writer.write(
                         img_strs,
                         str_key,
-                        sample_data[caption_indice] if caption_indice is not None else None,
+                        sample_data[caption_indice]
+                        if caption_indice is not None
+                        else None,
                         meta,
                     )
                 except Exception as err:  # pylint: disable=broad-except
