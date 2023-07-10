@@ -26,7 +26,7 @@ def download_image(row, timeout):
             url,
             data=None,
             headers={
-                "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0"
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0"
             },
         )
         with urllib.request.urlopen(request, timeout=timeout) as r:
