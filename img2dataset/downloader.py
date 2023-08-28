@@ -3,6 +3,7 @@
 from multiprocessing.pool import ThreadPool
 from threading import Semaphore
 import urllib.request
+import ssl
 import io
 import math
 import exifread
@@ -17,6 +18,12 @@ from .logger import CappedCounter
 from .logger import write_stats
 
 
+# TODO: make a PR with option for this
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+
 def download_image(row, timeout):
     """Download an image with urllib"""
     key, url = row
@@ -29,7 +36,7 @@ def download_image(row, timeout):
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:108.0) Gecko/20100101 Firefox/108.0"
             },
         )
-        with urllib.request.urlopen(request, timeout=timeout) as r:
+        with urllib.request.urlopen(request, timeout=timeout, context=ctx) as r:
             img_stream = io.BytesIO(r.read())
         return key, img_stream, None
     except Exception as err:  # pylint: disable=broad-except
